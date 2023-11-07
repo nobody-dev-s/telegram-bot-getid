@@ -2,7 +2,8 @@ use dotenvy::dotenv;
 use log::*;
 use std::env;
 use teloxide::prelude::*;
-use teloxide::types::Message;
+use teloxide::types::{Forward, ForwardedFrom, Message, ParseMode};
+use teloxide::types::{MessageCommon, MessageKind};
 use teloxide::Bot;
 use tracing_subscriber;
 
@@ -29,15 +30,38 @@ impl GetIDBot {
 
     pub async fn start(&self) {
         teloxide::repl(self.bot.clone(), |bot: Bot, message: Message| async move {
-            let chat_id = message.chat.id;
-            info!("received message text {}", message.text().unwrap_or(""));
-            if let Some(text) = message.text() {
-                match text {
-                    "id" => {
-                        let text = format!("GetID: {}", chat_id);
-                        bot.send_message(chat_id, text).await?;
+            // let chat_id = message.chat.id;
+            let Message { chat, kind, .. } = message.clone();
+            if let MessageKind::Common(MessageCommon { forward, .. }) = kind {
+                if let Some(Forward { from, .. }) = forward {
+                    info!("ForwardedFrom: {:?}", from);
+                    match from {
+                        ForwardedFrom::User(user) => {
+                            let text = format!("GetID: `{}`", user.id);
+                            bot.send_message(chat.id, text)
+                                .parse_mode(ParseMode::MarkdownV2)
+                                .await?;
+                        }
+                        ForwardedFrom::Chat(chat) => {
+                            let text = format!("GetID: `{}`", chat.id);
+                            bot.send_message(chat.id, text)
+                                .parse_mode(ParseMode::MarkdownV2)
+                                .await?;
+                        }
+                        _ => {}
                     }
-                    _ => {}
+                } else {
+                    if let Some(text) = message.text() {
+                        match text {
+                            "id" => {
+                                let text = format!("GetID: `{}`", chat.id);
+                                bot.send_message(chat.id, text)
+                                    .parse_mode(ParseMode::MarkdownV2)
+                                    .await?;
+                            }
+                            _ => {}
+                        }
+                    }
                 }
             }
             Ok(())
