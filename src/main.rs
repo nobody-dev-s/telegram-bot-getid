@@ -1,4 +1,3 @@
-use dotenvy::dotenv;
 use log::*;
 use std::env;
 use teloxide::prelude::*;
@@ -9,7 +8,6 @@ use tracing_subscriber;
 
 #[tokio::main]
 async fn main() {
-    dotenv().expect(".env file not found");
     tracing_subscriber::fmt::init();
     let bot = GetIDBot::new(env::var("token").expect("token not found"));
     bot.start().await;
